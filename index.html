@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>BackboneTutorials.com Beginner Video</title>
+  <link rel="stylesheet" href="http://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/2.1.1/css/bootstrap.min.css">
+</head>
+
+<body>
+
+
+  <div class="container">
+    <h1>Dictionary</h1>
+    <hr />
+    <div class="page"></div>
+  </div>
+
+  <script src="http://cdnjs.cloudflare.com/ajax/libs/jquery/1.8.2/jquery.min.js" type="text/javascript"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.1.2/handlebars.min.js"
+    type="text/javascript"></script>
+  <script src="http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.4.2/underscore-min.js"
+    type="text/javascript"></script>
+  <script src="http://cdnjs.cloudflare.com/ajax/libs/backbone.js/0.9.2/backbone-min.js"></script>
+
+  <script type="text/template" id="user-list-template">
+    <div class="name">
+      <input type="text">
+      <a class="search" href="#/search">Search</a>
+    </div>
+  </script>
+
+  <script type="text/template" id="user-search-template">
+    <div class="searched-word">
+        <% _.each(lists, function(category) { %>
+          <div>
+            <% _.each(category, function(words){ %>
+              <div>
+                <% _.each(words, function(word){ %>
+                  <div>
+                    <% _.each(word, function(meanings){ %>
+                      <div>
+                        <% _.each(meanings, function(meaning){ %>
+                          <div>
+                            <%= htmlEncode(meaning) %>
+                          </div>
+                        <% }); %>
+                      </div>
+                    <% }); %>
+                  </div>
+                <% }); %>
+              </div>
+            <% }); %>
+          </div>
+        <% }); %>
+    </div>
+  </script>
+
+  <script>
+    function htmlEncode(value) {
+      return $('<div/>').text(value).html();
+    }
+    $.fn.serializeObject = function () {
+      var o = {};
+      var a = this.serializeArray();
+      $.each(a, function () {
+        if (o[this.name] !== undefined) {
+          if (!o[this.name].push) {
+            o[this.name] = [o[this.name]];
+          }
+          o[this.name].push(this.value || '');
+        } else {
+          o[this.name] = this.value || '';
+        }
+      });
+      return o;
+    };
+    $.ajaxPrefilter(function (options, originalOptions, jqXHR) {
+      options.url = 'http://localhost:5000' + options.url;
+    });
+    var Definitions = Backbone.Collection.extend({
+      url: '/abate'
+    });
+    var Definition = Backbone.Model.extend({
+      urlRoot: '/abate'
+    });
+
+    var UserListView = Backbone.View.extend({
+      el: '.page',
+
+      events: {
+        'click .search': 'onSearch'
+      },
+
+      onSearch: function (event) {
+        var text = $(event.target).closest('.name').find('input').val();
+        var options = {
+          text: text
+        }
+        var userSearchView = new UserSearchView(options);
+        router.on('route:search', function (id) {
+          // render the search list
+          userSearchView.render();
+        });
+      },
+
+      render: function () {
+        var that = this;
+        var definitions = new Definitions();
+        var template = _.template($('#user-list-template').html());
+        that.$el.html(template);
+        $("input").keydown(function (event) {
+          if (event.keyCode == 13) {
+            that.onSearch(event);
+          }
+        });
+      }
+    });
+
+    var userListView = new UserListView();
+
+    var UserSearchView = Backbone.View.extend({
+      el: '.page',
+
+      events: {
+        'click .search': 'searchUser'
+      },
+      constructor: function (options) {
+        this.options = options || {};
+        var self = this;
+        var options = options || {};
+
+        var url = '/list/search/' + options.text;
+        var Model = Backbone.Model.extend({
+          urlRoot: url
+        });
+
+        var Collection = Backbone.Collection.extend({
+          url: url
+        });
+
+        this.model = new Model();
+        this.collection = new Collection();
+      },
+
+      render: function () {
+        var that = this;
+        this.collection.fetch({
+          success: function (definition) {
+            var lists = definition.models[0].get('list');
+            // _.each(definition.models[0].get('list'), function (category) {
+            //   _.each(category, function (words) {
+            //     _.each(words, function (word) {
+            //       _.each(word, function (meanings) {
+            //         _.each(meanings, function (meaning) {
+            //           console.log(meaning)
+            //         });
+            //       });
+            //     });
+            //   });
+            // });
+            var template = _.template($('#user-search-template').html(), { lists: definition.models[0].get('list') });
+            $(".page").html(template)
+          }
+        });
+      }
+    });
+
+    var Router = Backbone.Router.extend({
+      routes: {
+        "": "home",
+        "search": "search",
+      }
+    });
+    var router = new Router;
+
+    router.on('route:home', function () {
+      // render the basic fields
+      userListView.render();
+    });
+
+
+
+    Backbone.history.start();
+  </script>
+
+
+</body>
+
+</html>
