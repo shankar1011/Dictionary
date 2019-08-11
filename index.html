@@ -148,17 +148,6 @@
         this.collection.fetch({
           success: function (definition) {
             var lists = definition.models[0].get('list');
-            // _.each(definition.models[0].get('list'), function (category) {
-            //   _.each(category, function (words) {
-            //     _.each(words, function (word) {
-            //       _.each(word, function (meanings) {
-            //         _.each(meanings, function (meaning) {
-            //           console.log(meaning)
-            //         });
-            //       });
-            //     });
-            //   });
-            // });
             var template = _.template($('#user-search-template').html(), { lists: definition.models[0].get('list') });
             $(".page").html(template)
           }
